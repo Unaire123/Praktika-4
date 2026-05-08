@@ -1,4 +1,5 @@
 # -*- coding: UTF-8 -*-
+import sys
 from tkinter import messagebox
 import requests
 import urllib
@@ -9,7 +10,7 @@ import helper
 
 class eGela:
     _login = 0
-    _cookie = ""
+    _cookie = {"MoodleSessionegela":""}
     _curso = ""
     _refs = []
     _root = None
@@ -26,10 +27,25 @@ class eGela:
         print("##### 1. PETICION #####")
         metodo = 'GET'
         uri = "https://egela.ehu.eus/login/index.php"
-        #############################################
-        # RELLENAR CON CODIGO DE LA PETICION HTTP
-        # Y PROCESAMIENTO DE LA RESPUESTA HTTP
-        #############################################
+
+        erantzuna = requests.request(method=metodo, url=uri, allow_redirects=False)
+        print(erantzuna.request.method + " " + erantzuna.url)
+        print(str(erantzuna.status_code) + " " + erantzuna.reason)
+        print("")
+
+        edukia = erantzuna.content
+        ref_doc = BeautifulSoup(edukia, "html.parser")
+        logintoken = ref_doc.find('input', {'name': 'logintoken'}).get('value')
+        if not logintoken:
+            print("Errorea: Ez da aurkitu logintoken.")
+            sys.exit(1)
+
+        cookie = erantzuna.cookies.get("MoodleSessionegela")
+        if cookie:
+            _cookie = {"MoodleSessionegela": cookie}
+        else:
+            print("Errorea: Ez da aurkitu MoodleSessionegela.")
+            sys.exit(1)
 
         progress = 25
         progress_var.set(progress)
@@ -38,10 +54,36 @@ class eGela:
 
 
         print("\n##### 2. PETICION #####")
-        #############################################
-        # RELLENAR CON CODIGO DE LA PETICION HTTP
-        # Y PROCESAMIENTO DE LA RESPUESTA HTTP
-        #############################################
+
+        metodo = 'POST'
+        uri = "https://egela.ehu.eus/login/index.php"
+        payload = {
+            'logintoken': logintoken,
+            'username': username,
+            'password': password
+        }
+        erantzuna = requests.request(method=metodo, url=uri, data=payload, cookies=_cookie, allow_redirects=False)
+        print(erantzuna.request.method + " " + erantzuna.url)
+        print(str(erantzuna.status_code) + " " + erantzuna.reason)
+        print("")
+
+        if erantzuna.status_code == 303:
+            cookie = erantzuna.cookies.get("MoodleSessionegela")
+            if cookie:
+                _cookie = {"MoodleSessionegela": cookie}
+            else:
+                print("Errorea: Ez da aurkitu MoodleSessionegela.")
+                sys.exit(1)
+
+            location = erantzuna.headers.get("Location")
+            if not location:
+                print("Errorea: Ez da aurkitu hurrengo helbidea.")
+                sys.exit(1)
+
+            print("")
+        else:
+            print("\nERROREA: Erabiltzailea edo pasahitza txarto sartu dituzu!")
+            sys.exit(1)
 
         progress = 50
         progress_var.set(progress)
@@ -49,10 +91,20 @@ class eGela:
         time.sleep(1)
 
         print("\n##### 3. PETICION #####")
-        #############################################
-        # RELLENAR CON CODIGO DE LA PETICION HTTP
-        # Y PROCESAMIENTO DE LA RESPUESTA HTTP
-        #############################################
+        metodo = 'POST'
+        erantzuna = requests.request(method=metodo, url=location, cookies=_cookie, allow_redirects=False)
+        print(erantzuna.request.method + " " + erantzuna.url)
+        print(str(erantzuna.status_code) + " " + erantzuna.reason)
+        print("")
+
+        if erantzuna.status_code == 303:
+            location = erantzuna.headers.get("Location")
+            if not location:
+                print("Errorea: Ez da aurkitu hurrengo helbidea.")
+                sys.exit(1)
+        else:
+            print("\nERROREA: Erabiltzailea edo pasahitza txarto sartu dituzu!")
+            sys.exit(1)
 
         progress = 75
         progress_var.set(progress)
@@ -61,10 +113,12 @@ class eGela:
         popup.destroy()
 
         print("\n##### 4. PETICION #####")
-        #############################################
-        # RELLENAR CON CODIGO DE LA PETICION HTTP
-        # Y PROCESAMIENTO DE LA RESPUESTA HTTP
-        #############################################
+
+        metodo = 'GET'
+        erantzuna = requests.request(method=metodo, url=location, cookies=_cookie, allow_redirects=False)
+        print(erantzuna.request.method + " " + erantzuna.url)
+        print(str(erantzuna.status_code) + " " + erantzuna.reason)
+        print("")
 
         progress = 100
         progress_var.set(progress)
@@ -72,11 +126,8 @@ class eGela:
         time.sleep(1)
         popup.destroy()
 
-
-        if COMPROBACION_DE_LOG_IN:
-            #############################################
-            # ACTUALIZAR VARIABLES
-            #############################################
+        if erantzuna.status_code == 200:
+            self._login = 1
             self._root.destroy()
         else:
             messagebox.showinfo("Alert Message", "Login incorrect!")
