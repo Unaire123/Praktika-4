@@ -7,7 +7,6 @@ from urllib.parse import unquote
 from bs4 import BeautifulSoup
 import time
 import helper
-import json
 
 class eGela:
     _login = 0
@@ -60,8 +59,8 @@ class eGela:
         uri = "https://egela.ehu.eus/login/index.php"
         payload = {
             'logintoken': logintoken,
-            'username': username,
-            'password': password
+            'username': username.get().strip(),
+            'password': password.get().strip()
         }
         erantzuna = requests.request(method=metodo, url=uri, data=payload, cookies=_cookie, allow_redirects=False)
         print(erantzuna.request.method + " " + erantzuna.url)
@@ -187,31 +186,11 @@ class eGela:
         return self._refs
 
     def get_pdf(self, selection):
+
         print("\t##### descargando  PDF... #####")
-        cookie = self._cookie
-        if cookie == "":
-            print("Cookie-a ez dago oraindik ezarrita")
-        else:
-            print("Cookie-a = " + cookie)
-        # ARRAY-a KUDEATU
-        print(" -----> FITXATEGIAREN INFORMAZIOA ESKURATZEN")
-        pdf_ref = self._refs[selection]
-        print("pdf_ref raw: " + pdf_ref)
-        pdf_info = json.loads(pdf_ref)
-        print("pdf_ref json:" + pdf_info)
-        pdf_name = pdf_info["pdf_name"]
-        print("pdf_izena:" + pdf_name)
-        pdf_link = pdf_info["pdf_link"]
-        print("pdf_link:" + pdf_link)
-
-        # HTTP ESKAERA
-        print(" -----> HTTP ESKAERA EGITEN")
-        erantzuna = requests.get(pdf_link, cookies=cookie, allow_redirects=False)
-        print(erantzuna.request.method + " " + erantzuna.url)
-        print(str(erantzuna.status_code) + " " + erantzuna.reason)
-        print("")
-
-        # EDUKIA KUDEATZEN
-        pdf_content = erantzuna.content
+        #############################################
+        # RELLENAR CON CODIGO DE LA PETICION HTTP
+        # Y PROCESAMIENTO DE LA RESPUESTA HTTP
+        #############################################
 
         return pdf_name, pdf_content

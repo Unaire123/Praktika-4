@@ -1,5 +1,13 @@
+import os
 import tkinter as tk
 from tkinter import ttk
+
+def set_icon(window, filename='favicon.ico'):
+    try:
+        icon_path = os.path.join(os.path.dirname(__file__), filename)
+        window.iconbitmap(icon_path)
+    except:
+        pass
 
 def center(win):
     win.update_idletasks()
@@ -22,7 +30,7 @@ def progress(tipo, title):
         popup = tk.Toplevel()
     popup.geometry('250x50')
     popup.title(title)
-    popup.iconbitmap('./favicon.ico')
+    set_icon(popup)
     center(popup)
     label = tk.Label(popup, text=title)
     label.grid(row=0, column=0)
