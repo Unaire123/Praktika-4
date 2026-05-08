@@ -187,7 +187,6 @@ class eGela:
         return self._refs
 
     def get_pdf(self, selection):
-
         print("\t##### descargando  PDF... #####")
         cookie = self._cookie
         if cookie == "":
