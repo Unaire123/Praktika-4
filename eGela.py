@@ -92,8 +92,20 @@ class eGela:
         # RELLENAR CON CODIGO DE LA PETICION HTTP
         # Y PROCESAMIENTO DE LA RESPUESTA HTTP
         #############################################
+        url = self._curso
+        headers = {
+            'Host': 'egela.ehu.eus',
+            'Cookie': self._cookie
+        }
 
-        progress_step = float(100.0 / len(NUMERO_DE_PDF_EN_EGELA))
+        resp = requests.get(url, headers=headers, allow_redirects=False)
+        html = resp.text
+        soup = BeautifulSoup(html, "html.parser")
+
+        if requests.status_code == 303 and 'Location':
+            print("Berbideraketa bat gertatu da, berbideratzen...")
+            url_erreala = resp.headers['Location']
+            resp = requests.get(url_erreala, headers=headers, allow_redirects=False)
 
 
         print("\n##### Analisis del HTML... #####")
@@ -101,17 +113,23 @@ class eGela:
         # ANALISIS DE LA PAGINA DEL AULA EN EGELA
         # PARA BUSCAR PDFs
         #############################################
+        pdf_links = []
 
-        # INICIALIZA Y ACTUALIZAR BARRA DE PROGRESO
-        # POR CADA PDF ANIADIDO EN self._refs
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            if "mod/resource" in href or "pluginfile.php" in href:
+                pdf_links.append(href)
 
-        progress_step = float(100.0 / len(NUMERO_DE_PDF_EN_EGELA))
+        progress_step = float(100.0 / len(pdf_links))
 
+        for href in pdf_links:
+            abs_url = urllib.parse.urljoin("https://egela.ehu.eus/", href)
+            self._refs.append(abs_url)
 
-                progress += progress_step
-                progress_var.set(progress)
-                progress_bar.update()
-                time.sleep(0.1)
+            progress += progress_step
+            progress_var.set(progress)
+            progress_bar.update()
+            time.sleep(0.1)
 
         popup.destroy()
         return self._refs
