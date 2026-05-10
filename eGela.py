@@ -12,7 +12,7 @@ import json
 class eGela:
     _login = 0
     _cookie = {"MoodleSessionegela":""}
-    _curso = ""
+    _curso = "https://egela.ehu.eus/course/view.php?id=107232"
     _refs = []
     _root = None
 
@@ -71,7 +71,7 @@ class eGela:
         if erantzuna.status_code == 303:
             cookie = erantzuna.cookies.get("MoodleSessionegela")
             if cookie:
-                _cookie = {"MoodleSessionegela": cookie}
+                self._cookie = {"MoodleSessionegela": cookie}
             else:
                 print("Errorea: Ez da aurkitu MoodleSessionegela.")
                 sys.exit(1)
@@ -93,7 +93,7 @@ class eGela:
 
         print("\n##### 3. PETICION #####")
         metodo = 'POST'
-        erantzuna = requests.request(method=metodo, url=location, cookies=_cookie, allow_redirects=False)
+        erantzuna = requests.request(method=metodo, url=location, cookies=self._cookie, allow_redirects=False)
         print(erantzuna.request.method + " " + erantzuna.url)
         print(str(erantzuna.status_code) + " " + erantzuna.reason)
         print("")
@@ -116,7 +116,7 @@ class eGela:
         print("\n##### 4. PETICION #####")
 
         metodo = 'GET'
-        erantzuna = requests.request(method=metodo, url=location, cookies=_cookie, allow_redirects=False)
+        erantzuna = requests.request(method=metodo, url=location, cookies=self._cookie, allow_redirects=False)
         print(erantzuna.request.method + " " + erantzuna.url)
         print(str(erantzuna.status_code) + " " + erantzuna.reason)
         print("")
@@ -144,21 +144,24 @@ class eGela:
         # RELLENAR CON CODIGO DE LA PETICION HTTP
         # Y PROCESAMIENTO DE LA RESPUESTA HTTP
         #############################################
+        if not self._cookie.get("MoodleSessionegela"):
+            print("Ez da aurkitu MoodleSessionegela cookie-a")
+            sys.exit(1)
+
         url = self._curso
         headers = {
-            'Host': 'egela.ehu.eus',
-            'Cookie': self._cookie
+            'Host': 'egela.ehu.eus'
         }
 
-        resp = requests.get(url, headers=headers, allow_redirects=False)
-        html = resp.text
-        soup = BeautifulSoup(html, "html.parser")
+        resp = requests.get(url, headers=headers, cookies=self._cookie, allow_redirects=False)
 
-        if requests.status_code == 303 and 'Location':
+        if resp.status_code == 303 and 'Location' in resp.headers:
             print("Berbideraketa bat gertatu da, berbideratzen...")
             url_erreala = resp.headers['Location']
-            resp = requests.get(url_erreala, headers=headers, allow_redirects=False)
+            resp = requests.get(url_erreala, headers=headers, cookies=self._cookie, allow_redirects=False)
 
+        html = resp.text
+        soup = BeautifulSoup(html, "html.parser")
 
         print("\n##### Analisis del HTML... #####")
         #############################################
@@ -170,7 +173,17 @@ class eGela:
         for a in soup.find_all("a", href=True):
             href = a["href"]
             if "mod/resource" in href or "pluginfile.php" in href:
-                pdf_links.append(href)
+                abs_url = urllib.parse.urljoin("https://egela.ehu.eus/", href)
+                pdf_name = unquote(a.get_text(strip=True))
+                self._refs.append({
+                    "pdf_name": pdf_name,
+                    "pdf_link": abs_url
+                })
+
+        if len(pdf_links) == 0:
+            print(resp.text)
+            print("Ez da PDF estekarik aurkitu.")
+            sys.exit(1)
 
         progress_step = float(100.0 / len(pdf_links))
 
@@ -190,19 +203,17 @@ class eGela:
 
         print("\t##### descargando  PDF... #####")
         cookie = self._cookie
-        if cookie == "":
+        if not cookie.get("MoodleSessionegela"):
             print("Cookie-a ez dago oraindik ezarrita")
         else:
-            print("Cookie-a = " + cookie)
+            print("Cookie-a = " + self._cookie["MoodleSessionegela"])
         # ARRAY-a KUDEATU
         print(" -----> FITXATEGIAREN INFORMAZIOA ESKURATZEN")
-        pdf_ref = self._refs[selection]
-        print("pdf_ref raw: " + pdf_ref)
-        pdf_info = json.loads(pdf_ref)
-        print("pdf_ref json:" + pdf_info)
+        pdf_info = self._refs[selection]
         pdf_name = pdf_info["pdf_name"]
-        print("pdf_izena:" + pdf_name)
         pdf_link = pdf_info["pdf_link"]
+        print("pdf_ref json:" + pdf_info)
+        print("pdf_izena:" + pdf_name)
         print("pdf_link:" + pdf_link)
 
         # HTTP ESKAERA
