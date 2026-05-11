@@ -168,33 +168,73 @@ class eGela:
         # ANALISIS DE LA PAGINA DEL AULA EN EGELA
         # PARA BUSCAR PDFs
         #############################################
-        pdf_links = []
+        self._refs = []
+        seen_links = set()
 
+        course_id = None
+        parsed_course = urllib.parse.urlparse(self._curso)
+        qs_course = urllib.parse.parse_qs(parsed_course.query)
+        if "id" in qs_course and qs_course["id"]:
+            course_id = qs_course["id"][0]
+
+        page_urls = {self._curso}
         for a in soup.find_all("a", href=True):
             href = a["href"]
-            if "mod/resource" in href or "pluginfile.php" in href:
-                abs_url = urllib.parse.urljoin("https://egela.ehu.eus/", href)
-                pdf_name = unquote(a.get_text(strip=True))
-                self._refs.append({
-                    "pdf_name": pdf_name,
-                    "pdf_link": abs_url
-                })
+            abs_url = urllib.parse.urljoin("https://egela.ehu.eus/", href)
+            if "course/view.php" in abs_url:
+                if course_id is None:
+                    page_urls.add(abs_url)
+                else:
+                    qs = urllib.parse.parse_qs(urllib.parse.urlparse(abs_url).query)
+                    if qs.get("id", [None])[0] == course_id:
+                        page_urls.add(abs_url)
 
-        if len(pdf_links) == 0:
+        for page_url in page_urls:
+            page_resp = requests.get(page_url, headers=headers, cookies=self._cookie, allow_redirects=True)
+            page_soup = BeautifulSoup(page_resp.text, "html.parser")
+
+            for a in page_soup.find_all("a", href=True):
+                href = a["href"]
+                if "mod/resource" in href or "pluginfile.php" in href:
+                    abs_url = urllib.parse.urljoin("https://egela.ehu.eus/", href)
+                    link_text = a.get_text(strip=True).lower()
+                    pdf_icon = a.find_previous("img", class_="activityicon")
+                    is_pdf_icon = False
+                    if pdf_icon and pdf_icon.get("src"):
+                        is_pdf_icon = "/f/pdf" in pdf_icon["src"]
+                    if "pluginfile.php" in href:
+                        parsed = urllib.parse.urlparse(abs_url)
+                        if ".pdf" not in parsed.path.lower() and ".pdf" not in link_text:
+                            continue
+                    else:
+                        if not is_pdf_icon:
+                            continue
+                    if abs_url in seen_links:
+                        continue
+                    seen_links.add(abs_url)
+                    pdf_name = unquote(a.get_text(strip=True))
+                    self._refs.append({
+                        "pdf_name": pdf_name,
+                        "pdf_link": abs_url
+                    })
+
+        if len(self._refs) == 0:
             print(resp.text)
             print("Ez da PDF estekarik aurkitu.")
             sys.exit(1)
 
-        progress_step = float(100.0 / len(pdf_links))
+        progress_step = float(100.0 / len(self._refs))
 
-        for href in pdf_links:
-            abs_url = urllib.parse.urljoin("https://egela.ehu.eus/", href)
-            self._refs.append(abs_url)
-
+        for _ in self._refs:
             progress += progress_step
             progress_var.set(progress)
             progress_bar.update()
+            print("PDF izena: " + _["pdf_name"])
+            print("PDF link: " + _["pdf_link"])
+            print ("Progresoa: " + progress.__str__() + "%")
+            print("")
             time.sleep(0.1)
+        print("Fitxategi kopuru finala: " + len(self._refs).__str__() + " pdf")
 
         popup.destroy()
         return self._refs
