@@ -148,19 +148,20 @@ class eGela:
             print("Ez da aurkitu MoodleSessionegela cookie-a")
             sys.exit(1)
 
-        url = self._curso
-        headers = {
+        URI = self._curso
+        goiburuak = {
             'Host': 'egela.ehu.eus'
         }
 
-        resp = requests.get(url, headers=headers, cookies=self._cookie, allow_redirects=False)
+        #eGelara sartzeko eskaera egin
+        erantzuna = requests.get(URI, headers=goiburuak, cookies=self._cookie, allow_redirects=False)
 
-        if resp.status_code == 303 and 'Location' in resp.headers:
+        if erantzuna.status_code == 303 and 'Location' in erantzuna.headers:
             print("Berbideraketa bat gertatu da, berbideratzen...")
-            url_erreala = resp.headers['Location']
-            resp = requests.get(url_erreala, headers=headers, cookies=self._cookie, allow_redirects=False)
+            URI_erreala = erantzuna.headers['Location']
+            erantzuna = requests.get(URI_erreala, headers=goiburuak, cookies=self._cookie, allow_redirects=False)
 
-        html = resp.text
+        html = erantzuna.text
         soup = BeautifulSoup(html, "html.parser")
 
         print("\n##### Analisis del HTML... #####")
@@ -168,63 +169,73 @@ class eGela:
         # ANALISIS DE LA PAGINA DEL AULA EN EGELA
         # PARA BUSCAR PDFs
         #############################################
-        self._refs = []
-        seen_links = set()
+        bisitatutako_link = set()
 
-        course_id = None
+        #Kurtsoaren ID-a lortu azpi atalak bilatzeko
+        kurtsoaren_id = None
         parsed_course = urllib.parse.urlparse(self._curso)
         qs_course = urllib.parse.parse_qs(parsed_course.query)
         if "id" in qs_course and qs_course["id"]:
-            course_id = qs_course["id"][0]
+            kurtsoaren_id = qs_course["id"][0]
 
-        page_urls = {self._curso}
+        #Azpi atal guztien estekak lortu eta gorde
+        atalenEstekak = {self._curso}
         for a in soup.find_all("a", href=True):
             href = a["href"]
-            abs_url = urllib.parse.urljoin("https://egela.ehu.eus/", href)
-            if "course/view.php" in abs_url:
-                if course_id is None:
-                    page_urls.add(abs_url)
+            pdfLinka = urllib.parse.urljoin("https://egela.ehu.eus/", href)
+            if "course/view.php" in pdfLinka:
+                if kurtsoaren_id is None:
+                    atalenEstekak.add(pdfLinka)
                 else:
-                    qs = urllib.parse.parse_qs(urllib.parse.urlparse(abs_url).query)
-                    if qs.get("id", [None])[0] == course_id:
-                        page_urls.add(abs_url)
+                    qs = urllib.parse.parse_qs(urllib.parse.urlparse(pdfLinka).query)
+                    if qs.get("id", [None])[0] == kurtsoaren_id:
+                        atalenEstekak.add(pdfLinka)
 
-        for page_url in page_urls:
-            page_resp = requests.get(page_url, headers=headers, cookies=self._cookie, allow_redirects=True)
-            page_soup = BeautifulSoup(page_resp.text, "html.parser")
+        #Atal bakoitzen esteketan PDF-k bilatu
+        for orriarenURI in atalenEstekak:
+            orriarenErantzuna = requests.get(orriarenURI, headers=goiburuak, cookies=self._cookie, allow_redirects=True)
+            orriSoup = BeautifulSoup(orriarenErantzuna.text, "html.parser")
 
-            for a in page_soup.find_all("a", href=True):
+            #Atal horretan dagoen link-ak bilatu
+            for a in orriSoup.find_all("a", href=True):
                 href = a["href"]
+                #Konprobatu PDF bat den bi modu desberdinetan
+                #1. Modua: PDF-aren ikonoa bilatzen
                 if "mod/resource" in href or "pluginfile.php" in href:
-                    abs_url = urllib.parse.urljoin("https://egela.ehu.eus/", href)
-                    link_text = a.get_text(strip=True).lower()
-                    pdf_icon = a.find_previous("img", class_="activityicon")
-                    is_pdf_icon = False
-                    if pdf_icon and pdf_icon.get("src"):
-                        is_pdf_icon = "/f/pdf" in pdf_icon["src"]
+                    pdfLinka = urllib.parse.urljoin("https://egela.ehu.eus/", href)
+                    estekarenTextua = a.get_text(strip=True).lower()
+                    estekarenIkonoa = a.find_previous("img", class_="activityicon")
+                    pdfDa = False
+                    if estekarenIkonoa and estekarenIkonoa.get("src"):
+                        pdfDa = "/f/pdf" in estekarenIkonoa["src"]
+                #2. Modua: PDF-aren estekaren textuan .pdf hitza badagoen
                     if "pluginfile.php" in href:
-                        parsed = urllib.parse.urlparse(abs_url)
-                        if ".pdf" not in parsed.path.lower() and ".pdf" not in link_text:
+                        parsed = urllib.parse.urlparse(pdfLinka)
+                        if ".pdf" not in parsed.path.lower() and ".pdf" not in estekarenTextua:
                             continue
+                    #PDF bat ez bada paso egin
                     else:
-                        if not is_pdf_icon:
+                        if not pdfDa:
                             continue
-                    if abs_url in seen_links:
+                    #Atalaren link-a gorde bisitatutako link-etan berriro ez bisitatzeko
+                    if pdfLinka in bisitatutako_link:
                         continue
-                    seen_links.add(abs_url)
-                    pdf_name = unquote(a.get_text(strip=True))
+                    bisitatutako_link.add(pdfLinka)
+                    pdfIzena = unquote(a.get_text(strip=True))
+                    #Zerrendan gorde
                     self._refs.append({
-                        "pdf_name": pdf_name,
-                        "pdf_link": abs_url
+                        "pdf_name": pdfIzena,
+                        "pdf_link": pdfLinka
                     })
 
         if len(self._refs) == 0:
-            print(resp.text)
+            print(erantzuna.text)
             print("Ez da PDF estekarik aurkitu.")
             sys.exit(1)
 
         progress_step = float(100.0 / len(self._refs))
 
+        #Bezeroak ikusten duen progresu barra eguneratu
         for _ in self._refs:
             progress += progress_step
             progress_var.set(progress)
