@@ -102,8 +102,23 @@ class Dropbox:
         # RELLENAR CON CODIGO DE LA PETICION HTTP
         # Y PROCESAMIENTO DE LA RESPUESTA HTTP
         #############################################
-
-        self._files = helper.update_listbox2(msg_listbox, self._path, contenido_json)
+        path = self._path
+        datuak = {'path': path}
+        datuak_encoded = json.dumps(datuak)
+        print("Datuak: " + datuak_encoded)
+        headers = {'Host': 'api.dropboxapi.com',
+                     'Authorization': 'Bearer ' + self._access_token,
+                     'Content-Type': 'application/json'}
+        erantzuna = requests.post(uri, headers=headers, data=datuak_encoded, allow_redirects=False)
+        status = erantzuna.status_code
+        print("\tStatus: " + str(status))
+        edukia = erantzuna.text
+        print("\tEdukia:")
+        edukia_json = json.loads(edukia)
+        print("Fitxategiak --> " + path)
+        for entrie in edukia_json["entries"]:
+            print(entrie['name'])
+        self._files = helper.update_listbox2(msg_listbox, self._path, edukia_json)
 
     def transfer_file(self, file_path, file_data):
         print("/upload")
@@ -113,6 +128,24 @@ class Dropbox:
         # RELLENAR CON CODIGO DE LA PETICION HTTP
         # Y PROCESAMIENTO DE LA RESPUESTA HTTP
         #############################################
+        datuak = {'path': file_path,
+                 'mode': 'add'}
+        datuak_encoded = json.dumps(datuak)
+
+        headers = {'Host': 'api.dropboxapi.com',
+                     'Authorization': 'Bearer ' + self._access_token,
+                     'DropBox-API-Arg': datuak_encoded,
+                     'Content-Type': 'application/octet-stream'}
+
+        erantzuna = requests.post(uri, headers=headers, allow_redirects=False, data=file_data)
+        status = erantzuna.status_code
+        print("\tStatus: " + str(status))
+        if (status == 200):
+            print("Fitxategia ondo igo da: " + file_path + "-era")
+            edukia = erantzuna.text
+            print("\tEdukia:" + edukia)
+        else:
+            print("\tERROR: Ftixategia igotzean")
 
     def delete_file(self, file_path):
         print("/delete_file")
