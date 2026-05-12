@@ -5,8 +5,8 @@ from socket import AF_INET, socket, SOCK_STREAM
 import json
 import helper
 
-app_key = 'n15ahor6ez54wnn'
-app_secret = '7v0iasy5fcj78ry'
+app_key = '6czs5uz3fr22x5f'
+app_secret = '12xoyvtfhswdl1b'
 server_addr = "localhost"
 server_port = 8070
 redirect_uri = "http://" + server_addr + ":" + str(server_port)
@@ -46,7 +46,7 @@ class Dropbox:
                         "<head><title>Proba</title></head>" \
                         "<body>The authentication flow has completed. Close this window.</body>" \
                         "</html>"
-        client_connection.sendall(http_response)
+        client_connection.sendall(http_response.encode("utf-8"))
         client_connection.close()
         server_socket.close()
 
@@ -59,16 +59,38 @@ class Dropbox:
         # PARA LA OBTENCION DEL ACCESS TOKEN
         #############################################
 
+        #HTTP eskaeraren parametroak prestatu
         servidor = 'www.dropbox.com'
-        params = {'response_type': 'code',
-                  'client_id': app_key,
-                  'redirect_uri': redirect_uri}
+        params = {
+            'response_type': 'code',
+            'client_id': app_key,
+            'redirect_uri': redirect_uri
+        }
 
+        #Parametroak parseatu URI barruan sartzeko
         params_encoded = urllib.parse.urlencode(params)
         recurso = '/oauth2/authorize?' + params_encoded
         uri = 'https://' + servidor + recurso
+        #Nabigatzailea ireki parseatutako URI-arekin saioa hasteko
         webbrowser.open_new(uri)
 
+        auth_code = self.local_server()
+
+        #Behin saioa hasita, aplikazioan sartzeko eskaera prestatu
+        token_url = 'https://api.dropboxapi.com/oauth2/token'
+        data = {
+            'code': auth_code,
+            'grant_type': 'authorization_code',
+            'client_id': app_key,
+            'client_secret': app_secret,
+            'redirect_uri': redirect_uri
+        }
+
+        #Aplikazioan sartzeko eskaera egin
+        token_resp = requests.post(token_url, data=data)
+        token_resp.raise_for_status()
+        token_json = token_resp.json()
+        self._access_token = token_json.get('access_token', '')
 
         self._root.destroy()
 
