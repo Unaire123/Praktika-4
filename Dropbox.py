@@ -91,6 +91,7 @@ class Dropbox:
         token_resp.raise_for_status()
         token_json = token_resp.json()
         self._access_token = token_json.get('access_token', '')
+        print(f"Access token: {self._access_token}")
 
         self._root.destroy()
 
@@ -103,7 +104,15 @@ class Dropbox:
         # Y PROCESAMIENTO DE LA RESPUESTA HTTP
         #############################################
         path = self._path
-        datuak = {'path': path}
+        datuak = {
+            'path': path,
+            'recursive': False,
+            'include_media_info': False,
+            'include_deleted': False,
+            'include_has_explicit_shared_members': False,
+            'include_mounted_folders': True,
+            'include_non_downloadable_files': True
+        }
         datuak_encoded = json.dumps(datuak)
         print("Datuak: " + datuak_encoded)
         headers = {'Host': 'api.dropboxapi.com',
@@ -112,9 +121,27 @@ class Dropbox:
         erantzuna = requests.post(uri, headers=headers, data=datuak_encoded, allow_redirects=False)
         status = erantzuna.status_code
         print("\tStatus: " + str(status))
+        print("\tHeaders respuesta: " + str(erantzuna.headers))
         edukia = erantzuna.text
-        print("\tEdukia:")
-        edukia_json = json.loads(edukia)
+        print("\tEdukia: [" + edukia + "]")
+        print("\tContent-Length: " + str(len(edukia)))
+
+        if status != 200:
+            print(f"ERROR: Status {status}")
+            print(f"Raw content: {erantzuna.content}")
+            try:
+                error_json = erantzuna.json()
+                print(f"Error JSON: {error_json}")
+            except:
+                print("No se pudo parsear error como JSON")
+            return
+
+        try:
+            edukia_json = json.loads(edukia)
+        except json.JSONDecodeError as e:
+            print(f"ERROR JSON: {e}")
+            return
+
         print("Fitxategiak --> " + path)
         for entrie in edukia_json["entries"]:
             print(entrie['name'])
