@@ -5,8 +5,8 @@ from socket import AF_INET, socket, SOCK_STREAM
 import json
 import helper
 
-app_key = '6czs5uz3fr22x5f'
-app_secret = '12xoyvtfhswdl1b'
+app_key = 'yk858315i30mt4y'
+app_secret = 'gwdzegoqoauud4a'
 server_addr = "localhost"
 server_port = 8070
 redirect_uri = "http://" + server_addr + ":" + str(server_port)
@@ -159,7 +159,7 @@ class Dropbox:
                  'mode': 'add'}
         datuak_encoded = json.dumps(datuak)
 
-        headers = {'Host': 'api.dropboxapi.com',
+        headers = {'Host': 'content.dropboxapi.com',
                      'Authorization': 'Bearer ' + self._access_token,
                      'DropBox-API-Arg': datuak_encoded,
                      'Content-Type': 'application/octet-stream'}
