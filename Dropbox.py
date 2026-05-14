@@ -104,6 +104,9 @@ class Dropbox:
         # Y PROCESAMIENTO DE LA RESPUESTA HTTP
         #############################################
         path = self._path
+        if path in (None, "/"):
+            path = ""
+
         datuak = {
             'path': path,
             'recursive': False,
@@ -151,10 +154,7 @@ class Dropbox:
         print("/upload")
         uri = 'https://content.dropboxapi.com/2/files/upload'
         # https://www.dropbox.com/developers/documentation/http/documentation#files-upload
-        #############################################
-        # RELLENAR CON CODIGO DE LA PETICION HTTP
-        # Y PROCESAMIENTO DE LA RESPUESTA HTTP
-        #############################################
+
         datuak = {'path': file_path,
                  'mode': 'add'}
         datuak_encoded = json.dumps(datuak)

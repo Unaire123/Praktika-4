@@ -263,16 +263,26 @@ class eGela:
         pdf_info = self._refs[selection]
         pdf_name = pdf_info["pdf_name"]
         pdf_link = pdf_info["pdf_link"]
-        print("pdf_ref json:" + pdf_info)
+
+        try:
+            import json as _json
+            print("pdf_ref json: " + _json.dumps(pdf_info, ensure_ascii=False))
+        except Exception:
+            print(f"pdf_ref: {pdf_info}")
+
         print("pdf_izena:" + pdf_name)
         print("pdf_link:" + pdf_link)
 
         # HTTP ESKAERA
         print(" -----> HTTP ESKAERA EGITEN")
-        erantzuna = requests.get(pdf_link, cookies=cookie, allow_redirects=False)
+        erantzuna = requests.get(pdf_link, cookies=cookie, allow_redirects=True)
         print(erantzuna.request.method + " " + erantzuna.url)
         print(str(erantzuna.status_code) + " " + erantzuna.reason)
         print("")
+
+        if erantzuna.status_code != 200:
+            print(f"ERROR al descargar PDF: status {erantzuna.status_code}")
+            return pdf_name, None
 
         # EDUKIA KUDEATZEN
         pdf_content = erantzuna.content
