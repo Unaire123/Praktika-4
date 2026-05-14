@@ -182,6 +182,23 @@ class Dropbox:
         # RELLENAR CON CODIGO DE LA PETICION HTTP
         # Y PROCESAMIENTO DE LA RESPUESTA HTTP
         #############################################
+        datuak = {'path': file_path }
+
+        datuak_encoded = json.dumps(datuak)
+
+        headers = {'Host': 'api.dropboxapi.com',
+                   'Authorization': 'Bearer ' + self._access_token,
+                   'Content-Type': 'application/json'}
+
+        erantzuna = requests.post(uri, headers=headers, allow_redirects=False, data=datuak_encoded)
+        status = erantzuna.status_code
+        print("\tStatus: " + str(status))
+        if (status == 200):
+            print("Fitxategia ezabatu da: " + file_path)
+            edukia = erantzuna.text
+            print("\tEdukia:" + edukia)
+        else:
+            print("\tERROR: Ftixategia igotzean")
 
     def create_folder(self, path):
         print("/create_folder")
