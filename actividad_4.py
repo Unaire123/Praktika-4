@@ -111,6 +111,63 @@ def create_folder():
     dropbox._root = popup
 
 
+def rename_file():
+    widget = msg_listbox2
+    selection = widget.curselection()
+
+    if not selection:
+        print("Ez da ezer aukeratu")
+        return
+
+    if selection[0] == 0 and dropbox._path != "/":
+        print("Ezin da erroa izenez aldatu")
+        return
+
+    selected_file = dropbox._files[selection[0]]
+    old_name = selected_file['name']
+
+    popup = tk.Toplevel(newroot)
+    popup.geometry('250x120')
+    popup.title('Izena aldatu')
+    helper.set_icon(popup)
+    helper.center(popup)
+
+    rename_frame = tk.Frame(popup, padx=10, pady=10)
+    rename_frame.pack(fill=tk.BOTH, expand=True)
+
+    label = tk.Label(rename_frame, text=f"Oraingo izena: {old_name}")
+    label.pack(side=tk.TOP, pady=5)
+
+    label2 = tk.Label(rename_frame, text="Izen berria:")
+    label2.pack(side=tk.TOP)
+
+    entry_field = tk.Entry(rename_frame, width=35)
+    entry_field.insert(0, old_name)  # Pre-rellenar con el nombre actual
+    entry_field.pack(side=tk.TOP, pady=5)
+
+    def do_rename(new_name):
+        if not new_name.strip():
+            print("Izena ezin da zuriz hutsi")
+            return
+
+        if dropbox._path == "/":
+            old_path = "/" + old_name
+            new_path_full = "/" + new_name
+        else:
+            old_path = dropbox._path + "/" + old_name
+            new_path_full = dropbox._path + "/" + new_name
+
+        print(f"Izena aldatzen: {old_path} -> {new_path_full}")
+        dropbox.rename_file(old_path, new_name)
+        popup.destroy()
+        dropbox.list_folder(msg_listbox2)
+
+    send_button = tk.Button(rename_frame, text="Rename",
+                            command=lambda: do_rename(entry_field.get()))
+    send_button.pack(side=tk.TOP, pady=5)
+
+    entry_field.bind("<Return>", lambda e: do_rename(entry_field.get()))
+
 ##########################################################################################################
 
 def check_credentials(event= None):
@@ -250,6 +307,8 @@ button2 = tk.Button(frame2, borderwidth=4,  background="#C6185C",fg="white", tex
 button2.pack(padx=2, pady=2)
 button3 = tk.Button(frame2, borderwidth=4, background="#7C86FF",fg="white", text="Create folder", width=10, pady=8, command=create_folder)
 button3.pack(padx=2, pady=2)
+button4 = tk.Button(frame2, borderwidth=4, background="#FFA500",fg="white", text="Rename", width=10, pady=8, command=rename_file)
+button4.pack(padx=2, pady=2)
 frame2.grid(row=1, column=3,  ipadx=10, ipady=10)
 
 for each in pdfs:

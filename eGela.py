@@ -285,6 +285,44 @@ class eGela:
             return pdf_name, None
 
         # EDUKIA KUDEATZEN
-        pdf_content = erantzuna.content
+        # Konprobatu PDF edo HTML den
+        content_type = erantzuna.headers.get('Content-Type', '')
+        print(f"Content-Type: {content_type}")
+
+        if 'application/pdf' in content_type:
+            pdf_content = erantzuna.content
+        elif 'text/html' in content_type:
+            print("Se detectó HTML, buscando el enlace al PDF...")
+            soup = BeautifulSoup(erantzuna.text, "html.parser")
+
+            resource_div = soup.find("div", class_="resourceworkaround")
+
+            if resource_div:
+                link_element = resource_div.find("a", href=True)
+
+                if link_element:
+                    real_pdf_link = link_element["href"]
+                    print(f"Enlace al PDF encontrado: {real_pdf_link}")
+
+                    real_pdf_link = urllib.parse.urljoin("https://egela.ehu.eus/", real_pdf_link)
+                    erantzuna = requests.get(real_pdf_link, cookies=cookie, allow_redirects=True)
+                    print(erantzuna.request.method + " " + erantzuna.url)
+                    print(str(erantzuna.status_code) + " " + erantzuna.reason)
+                    print("")
+
+                    if erantzuna.status_code != 200:
+                        print(f"ERROR al descargar el PDF del enlace encontrado: status {erantzuna.status_code}")
+                        return pdf_name, None
+
+                    pdf_content = erantzuna.content
+                else:
+                    print("ERROR: No se encontró elemento 'a' dentro del div resourceworkaround")
+                    return pdf_name, None
+            else:
+                print("ERROR: No se encontró div con clase resourceworkaround")
+                return pdf_name, None
+        else:
+            print(f"ERROR: Tipo de contenido no esperado: {content_type}")
+            return pdf_name, None
 
         return pdf_name, pdf_content

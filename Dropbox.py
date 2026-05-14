@@ -202,8 +202,67 @@ class Dropbox:
 
     def create_folder(self, path):
         print("/create_folder")
-       # https://www.dropbox.com/developers/documentation/http/documentation#files-create_folder
-        #############################################
-        # RELLENAR CON CODIGO DE LA PETICION HTTP
-        # Y PROCESAMIENTO DE LA RESPUESTA HTTP
-        #############################################
+        # https://www.dropbox.com/developers/documentation/http/documentation#files-create_folder
+        uri = 'https://api.dropboxapi.com/2/files/create_folder_v2'
+
+        datuak = {'path': path}
+        datuak_encoded = json.dumps(datuak)
+
+        headers = {'Host': 'api.dropboxapi.com',
+                   'Authorization': 'Bearer ' + self._access_token,
+                   'Content-Type': 'application/json'}
+
+        erantzuna = requests.post(uri, headers=headers, allow_redirects=False, data=datuak_encoded)
+        status = erantzuna.status_code
+        print("\tStatus: " + str(status))
+
+        if (status == 200):
+            print("Carpeta creada: " + path)
+            edukia = erantzuna.text
+            print("\tEdukia:" + edukia)
+        else:
+            print("\tERROR: Error al crear la carpeta")
+
+    def rename_file(self, old_path, new_name):
+        print("/rename_file")
+        # https://www.dropbox.com/developers/documentation/http/documentation#files-move_v2
+        uri = 'https://api.dropboxapi.com/2/files/move_v2'
+
+        if old_path == "/":
+            new_path = "/" + new_name
+        else:
+            if "/" in old_path.rstrip("/"):
+                parent_path = old_path.rsplit("/", 1)[0]
+            else:
+                parent_path = ""
+
+            if parent_path == "":
+                new_path = "/" + new_name
+            else:
+                new_path = parent_path + "/" + new_name
+
+        datuak = {
+            'from_path': old_path,
+            'to_path': new_path,
+            'allow_shared_folder': False,
+            'autorename': False,
+            'allow_ownership_transfer': False
+        }
+
+        datuak_encoded = json.dumps(datuak)
+
+        headers = {'Host': 'api.dropboxapi.com',
+                   'Authorization': 'Bearer ' + self._access_token,
+                   'Content-Type': 'application/json'}
+
+        erantzuna = requests.post(uri, headers=headers, allow_redirects=False, data=datuak_encoded)
+        status = erantzuna.status_code
+        print("\tStatus: " + str(status))
+
+        if (status == 200):
+            print("Archivo renombrado: " + old_path + " -> " + new_path)
+            edukia = erantzuna.text
+            print("\tEdukia:" + edukia)
+        else:
+            print("\tERROR: Error al renombrar el archivo")
+            print(f"Response: {erantzuna.text}")
