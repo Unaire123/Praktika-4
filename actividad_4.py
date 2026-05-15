@@ -1,6 +1,8 @@
 # -*- coding: UTF-8 -*-
 import tkinter as tk
 import os
+from tkinter import messagebox
+
 import eGela
 import Dropbox
 import helper
@@ -168,6 +170,82 @@ def rename_file():
 
     entry_field.bind("<Return>", lambda e: do_rename(entry_field.get()))
 
+def move_file():
+    widget = msg_listbox2
+    selection = widget.curselection()
+
+    if not selection:
+        messagebox.showwarning("Move File", "Ez da ezer aukeratu")
+        return
+
+    if selection[0] == 0 and dropbox._path != "/":
+        messagebox.showwarning("Move File", "Ezin da erroa mugitu")
+        return
+
+    selected_file = dropbox._files[selection[0]]
+    file_name = selected_file['name']
+
+    directories = dropbox.get_all_directories("/")
+
+    if not directories:
+        messagebox.showwarning("Move File", "Ez dago direktorio erabilgarririk. Sortu karpeta bat lehenengo")
+        return
+
+    popup = tk.Toplevel(newroot)
+    popup.geometry('300x400')
+    popup.title('Mugitu fitxategia')
+    helper.set_icon(popup)
+    helper.center(popup)
+
+    move_frame = tk.Frame(popup, padx=10, pady=10)
+    move_frame.pack(fill=tk.BOTH, expand=True)
+
+    label = tk.Label(move_frame, text=f"Aukeratu helmugua:\n{file_name}")
+    label.pack(side=tk.TOP, pady=10)
+
+    scrollbar = tk.Scrollbar(move_frame)
+    dir_listbox = tk.Listbox(move_frame, height=15, width=40, yscrollcommand=scrollbar.set)
+    dir_listbox.configure(yscrollcommand=scrollbar.set)
+    scrollbar.configure(command=dir_listbox.yview)
+
+    for dir_path in directories:
+        dir_listbox.insert(tk.END, dir_path)
+
+    dir_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+    def do_move():
+        selection_dir = dir_listbox.curselection()
+
+        if not selection_dir:
+            messagebox.showwarning("Move File", "Aukeratu helmuga direktorioa")
+            return
+
+        destination = directories[selection_dir[0]]
+
+        if dropbox._path == "/":
+            old_path = "/" + file_name
+        else:
+            old_path = dropbox._path + "/" + file_name
+
+        if old_path == destination + "/" + file_name:
+            messagebox.showwarning("Move File", "Jatorria eta helmuga berdinak dira")
+            return
+
+        print(f"Fitxategia mugitzen: {old_path} -> {destination}/{file_name}")
+        dropbox.move_file(old_path, destination, file_name)
+        popup.destroy()
+        dropbox.list_folder(msg_listbox2)
+
+    button_frame = tk.Frame(move_frame)
+    button_frame.pack(side=tk.BOTTOM, pady=10)
+
+    accept_button = tk.Button(button_frame, text="Mugitu", width=10, pady=5, command=do_move)
+    accept_button.pack(side=tk.LEFT, padx=5)
+
+    cancel_button = tk.Button(button_frame, text="Utzi", width=10, pady=5, command=popup.destroy)
+    cancel_button.pack(side=tk.LEFT, padx=5)
+
 ##########################################################################################################
 
 def check_credentials(event= None):
@@ -309,6 +387,8 @@ button3 = tk.Button(frame2, borderwidth=4, background="#7C86FF",fg="white", text
 button3.pack(padx=2, pady=2)
 button4 = tk.Button(frame2, borderwidth=4, background="#FFA500",fg="white", text="Rename", width=10, pady=8, command=rename_file)
 button4.pack(padx=2, pady=2)
+button5 = tk.Button(frame2, borderwidth=4, background="#4CAF50",fg="white", text="Move", width=10, pady=8, command=move_file)
+button5.pack(padx=2, pady=2)
 frame2.grid(row=1, column=3,  ipadx=10, ipady=10)
 
 for each in pdfs:

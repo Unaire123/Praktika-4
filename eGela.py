@@ -7,7 +7,6 @@ from urllib.parse import unquote
 from bs4 import BeautifulSoup
 import time
 import helper
-import json
 
 class eGela:
     _login = 0
@@ -221,7 +220,17 @@ class eGela:
                     if pdfLinka in bisitatutako_link:
                         continue
                     bisitatutako_link.add(pdfLinka)
-                    pdfIzena = unquote(a.get_text(strip=True))
+                    a_copy = a
+                    if a_copy.find("span", class_="accesshide"):
+                        for span in a_copy.find_all("span", class_="accesshide"):
+                            span.decompose()
+                        pdfIzena = unquote(a_copy.get_text(strip=True))
+                    else:
+                        pdfIzena = unquote(a.get_text(strip=True))
+
+                    if not pdfIzena.lower().endswith('.pdf'):
+                        pdfIzena = pdfIzena + '.pdf'
+
                     #Zerrendan gorde
                     self._refs.append({
                         "pdf_name": pdfIzena,

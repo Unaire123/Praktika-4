@@ -53,11 +53,6 @@ class Dropbox:
         return auth_code
 
     def do_oauth(self):
-        #############################################
-        # RELLENAR CON CODIGO DE LAS PETICIONES HTTP
-        # Y PROCESAMIENTO DE LAS RESPUESTAS HTTP
-        # PARA LA OBTENCION DEL ACCESS TOKEN
-        #############################################
 
         #HTTP eskaeraren parametroak prestatu
         servidor = 'www.dropbox.com'
@@ -99,10 +94,6 @@ class Dropbox:
         print("/list_folder")
         uri = 'https://api.dropboxapi.com/2/files/list_folder'
         # https://www.dropbox.com/developers/documentation/http/documentation#files-list_folder
-        #############################################
-        # RELLENAR CON CODIGO DE LA PETICION HTTP
-        # Y PROCESAMIENTO DE LA RESPUESTA HTTP
-        #############################################
         path = self._path
         if path in (None, "/"):
             path = ""
@@ -178,10 +169,6 @@ class Dropbox:
         print("/delete_file")
         uri = 'https://api.dropboxapi.com/2/files/delete_v2'
         # https://www.dropbox.com/developers/documentation/http/documentation#files-delete
-        #############################################
-        # RELLENAR CON CODIGO DE LA PETICION HTTP
-        # Y PROCESAMIENTO DE LA RESPUESTA HTTP
-        #############################################
         datuak = {'path': file_path }
 
         datuak_encoded = json.dumps(datuak)
@@ -266,3 +253,91 @@ class Dropbox:
         else:
             print("\tERROR: Error al renombrar el archivo")
             print(f"Response: {erantzuna.text}")
+
+    def move_file(self, old_path, destination_path, file_name):
+        print("/move_file")
+        # https://www.dropbox.com/developers/documentation/http/documentation#files-move_v2
+        uri = 'https://api.dropboxapi.com/2/files/move_v2'
+
+        if destination_path == "/":
+            new_path = "/" + file_name
+        else:
+            new_path = destination_path + "/" + file_name
+
+        datuak = {
+            'from_path': old_path,
+            'to_path': new_path,
+            'allow_shared_folder': False,
+            'autorename': False,
+            'allow_ownership_transfer': False
+        }
+
+        datuak_encoded = json.dumps(datuak)
+
+        headers = {'Host': 'api.dropboxapi.com',
+                   'Authorization': 'Bearer ' + self._access_token,
+                   'Content-Type': 'application/json'}
+
+        erantzuna = requests.post(uri, headers=headers, allow_redirects=False, data=datuak_encoded)
+        status = erantzuna.status_code
+        print("\tStatus: " + str(status))
+
+        if (status == 200):
+            print("Fitxategia mugitu da: " + old_path + " -> " + new_path)
+            edukia = erantzuna.text
+            print("\tEdukia:" + edukia)
+        else:
+            print("\tERROR: Fitxategia mugitzean")
+
+    def get_all_directories(self, path):
+        print("/get_all_directories")
+        directories = ["/"]
+        visited = set()
+
+        def explore(current_path):
+            if current_path in visited:
+                return
+            visited.add(current_path)
+
+            uri = 'https://api.dropboxapi.com/2/files/list_folder'
+
+            list_path = current_path
+            if list_path in (None, "/"):
+                list_path = ""
+
+            datuak = {
+                'path': list_path,
+                'recursive': False,
+                'include_media_info': False,
+                'include_deleted': False,
+                'include_has_explicit_shared_members': False,
+                'include_mounted_folders': True,
+                'include_non_downloadable_files': True
+            }
+
+            datuak_encoded = json.dumps(datuak)
+
+            headers = {'Host': 'api.dropboxapi.com',
+                       'Authorization': 'Bearer ' + self._access_token,
+                       'Content-Type': 'application/json'}
+
+            erantzuna = requests.post(uri, headers=headers, data=datuak_encoded, allow_redirects=False)
+            status = erantzuna.status_code
+            print("\tStatus: " + str(status))
+
+            if status != 200:
+                print("\tERROR: no se pudieron listar directorios")
+                print("\tEdukia:" + erantzuna.text)
+                return
+
+            edukia_json = erantzuna.json()
+
+            for entry in edukia_json.get("entries", []):
+                if entry.get(".tag") == "folder":
+                    folder_path = entry.get("path_display")
+                    if folder_path and folder_path not in directories:
+                        directories.append(folder_path)
+                        explore(folder_path)
+
+        explore(path)
+        return sorted(directories)
