@@ -15,6 +15,7 @@ class Dropbox:
     _access_token = ""
     _path = "/"
     _files = []
+    _full_files = []
     _root = None
     _msg_listbox = None
 
@@ -149,6 +150,7 @@ class Dropbox:
         datuak = {'path': file_path,
                  'mode': 'add'}
         datuak_encoded = json.dumps(datuak)
+        self._full_files = list(self._files)
 
         headers = {'Host': 'content.dropboxapi.com',
                      'Authorization': 'Bearer ' + self._access_token,
