@@ -141,6 +141,7 @@ class Dropbox:
         for entrie in edukia_json["entries"]:
             print(entrie['name'])
         self._files = helper.update_listbox2(msg_listbox, self._path, edukia_json)
+        self._full_files = list(self._files)
 
     def transfer_file(self, file_path, file_data):
         print("/upload")

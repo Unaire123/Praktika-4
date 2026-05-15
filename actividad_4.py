@@ -341,7 +341,7 @@ if not egela._login:
     exit()
 # Si nos logeamos en eGela cogemos las referencias a los pdfs
 pdfs = egela.get_pdf_refs()
-egela_full_refs = list(egela._refs
+egela_full_refs = list(egela._refs)
 ##########################################################################################################
 # Login Dropbox
 root = tk.Tk()
@@ -400,6 +400,7 @@ clear_button1 = tk.Button(search_frame1, text="Limpiar", command=clear_egela_fil
 search_entry1.pack(side=tk.LEFT, padx=2)
 search_button1.pack(side=tk.LEFT, padx=2)
 clear_button1.pack(side=tk.LEFT, padx=2)
+search_frame1.pack(side=tk.TOP, fill=tk.X)
 msg_listbox1 = make_listbox(messages_frame1)
 msg_listbox1.bind('<<ListboxSelect>>', on_selecting1)
 msg_listbox1.pack(side=tk.LEFT, fill=tk.BOTH)
